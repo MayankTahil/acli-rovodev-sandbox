@@ -12,10 +12,10 @@ A containerized environment for Atlassian's AI coding agent: **Rovo Dev** (Beta)
 
 ## Status: ✅ Working
 
-- acli v1.2.1-stable installed and authenticated
+- acli installed with multi-architecture support (AMD64/ARM64)
 - Rovo Dev commands available
 - Local file access working
-- Compatible with Apple Silicon (minor Rosetta warnings are normal)
+- **Fixed**: Apple Silicon (M1/M2/M3) compatibility issues resolved
 
 ## Quick Start
 
@@ -50,8 +50,13 @@ CONTAINER_NAME=rovodev-workspace
 
 **Manual way:**
 ```bash
-docker build -t rovodev:latest .
-docker run -it --env-file .env -v $(pwd):/workspace rovodev:latest
+# For Apple Silicon (M1/M2/M3)
+docker build --platform linux/arm64 -t rovodev:latest .
+docker run -it --platform linux/arm64 --env-file .env -v $(pwd):/workspace rovodev:latest
+
+# For Intel/AMD64
+docker build --platform linux/amd64 -t rovodev:latest .
+docker run -it --platform linux/amd64 --env-file .env -v $(pwd):/workspace rovodev:latest
 ```
 
 ### 3. Using the Container
@@ -72,12 +77,21 @@ sudo apt-get update && sudo apt-get install -y package-name
 
 ## Troubleshooting
 
+**Architecture Issues (Apple Silicon):**
+- If you see `rosetta error: failed to open elf` errors, rebuild the container:
+  ```bash
+  docker rmi rovodev:latest
+  ./run-rovodev.sh
+  ```
+- The script now automatically detects your architecture and builds accordingly
+
 **Authentication Issues:**
 - Verify your `.env` file has correct email and API token
 - Test: `docker run --rm --env-file .env -v $(pwd):/workspace rovodev:latest bash -c "acli rovodev auth status"`
 
-**Rosetta Errors (Apple Silicon):**
-- "rosetta error" messages are normal and don't affect functionality
+**Manual Architecture Override:**
+- Force ARM64: `docker build --platform linux/arm64 -t rovodev:latest .`
+- Force AMD64: `docker build --platform linux/amd64 -t rovodev:latest .`
 
 **File Structure:**
 ```

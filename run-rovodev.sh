@@ -55,10 +55,20 @@ fi
 # Set default container name if not provided
 CONTAINER_NAME=${CONTAINER_NAME:-rovodev-workspace}
 
+# Detect platform architecture
+PLATFORM=""
+if [[ $(uname -m) == "arm64" ]] || [[ $(uname -m) == "aarch64" ]]; then
+    PLATFORM="--platform linux/arm64"
+    print_status "Detected ARM64 architecture (Apple Silicon)"
+elif [[ $(uname -m) == "x86_64" ]]; then
+    PLATFORM="--platform linux/amd64"
+    print_status "Detected AMD64 architecture"
+fi
+
 # Build the Docker image if it doesn't exist
 if ! docker image inspect rovodev:latest >/dev/null 2>&1; then
-    print_status "Building rovodev Docker image..."
-    docker build -t rovodev:latest .
+    print_status "Building rovodev Docker image for $(uname -m) architecture..."
+    docker build ${PLATFORM} -t rovodev:latest .
 fi
 
 # Stop and remove existing container if it exists
@@ -77,6 +87,7 @@ print_status "Mounting current directory: ${CURRENT_DIR} -> /workspace"
 # Run the container with environment variables and volume mount
 docker run -it \
     --name "${CONTAINER_NAME}" \
+    ${PLATFORM} \
     --env-file .env \
     -v "${CURRENT_DIR}:/workspace" \
     -w /workspace \

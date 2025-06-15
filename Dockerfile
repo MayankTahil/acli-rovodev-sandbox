@@ -1,4 +1,5 @@
 # Use Ubuntu minimal as base image for better package management support
+# Support both AMD64 and ARM64 architectures
 FROM ubuntu:22.04
 
 # Set environment variables to avoid interactive prompts during package installation
@@ -29,10 +30,20 @@ RUN apt-get update && apt-get install -y \
     sudo \
     && rm -rf /var/lib/apt/lists/*
 
-# Install acli (Atlassian CLI) using official installation method
-RUN curl -LO "https://acli.atlassian.com/linux/latest/acli_linux_amd64/acli" && \
+# Install acli (Atlassian CLI) with architecture detection
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+        ACLI_ARCH="amd64"; \
+    elif [ "$ARCH" = "aarch64" ]; then \
+        ACLI_ARCH="arm64"; \
+    else \
+        echo "Unsupported architecture: $ARCH" && exit 1; \
+    fi && \
+    echo "Downloading acli for architecture: $ACLI_ARCH" && \
+    curl -LO "https://acli.atlassian.com/linux/latest/acli_linux_${ACLI_ARCH}/acli" && \
     chmod +x ./acli && \
-    mv ./acli /usr/local/bin/acli
+    mv ./acli /usr/local/bin/acli && \
+    echo "acli installed successfully for $ACLI_ARCH"
 
 # Create workspace directory with proper permissions
 RUN mkdir -p /workspace && chown rovodev:rovodev /workspace
