@@ -84,22 +84,30 @@ RUN echo '#!/bin/bash' > /home/rovodev/entrypoint.sh && \
     echo '# Setup authentication on container start' >> /home/rovodev/entrypoint.sh && \
     echo 'setup_acli_auth' >> /home/rovodev/entrypoint.sh && \
     echo '' >> /home/rovodev/entrypoint.sh && \
-    echo '# Check if rovodev command is available' >> /home/rovodev/entrypoint.sh && \
-    echo 'if acli rovodev --help &> /dev/null; then' >> /home/rovodev/entrypoint.sh && \
-    echo '    echo "✅ acli rovodev is available!"' >> /home/rovodev/entrypoint.sh && \
-    echo '    echo "You can now use acli rovodev commands."' >> /home/rovodev/entrypoint.sh && \
-    echo 'else' >> /home/rovodev/entrypoint.sh && \
-    echo '    echo "⚠️  rovodev utility not found. Please ensure you have the latest acli version."' >> /home/rovodev/entrypoint.sh && \
-    echo '    echo "Available acli commands:"' >> /home/rovodev/entrypoint.sh && \
-    echo '    acli --help 2>/dev/null || echo "acli command not found"' >> /home/rovodev/entrypoint.sh && \
-    echo 'fi' >> /home/rovodev/entrypoint.sh && \
+    echo '# Function to start rovodev automatically' >> /home/rovodev/entrypoint.sh && \
+    echo 'start_rovodev() {' >> /home/rovodev/entrypoint.sh && \
+    echo '    if acli rovodev --help &> /dev/null; then' >> /home/rovodev/entrypoint.sh && \
+    echo '        echo "✅ acli rovodev is available!"' >> /home/rovodev/entrypoint.sh && \
+    echo '        echo "🚀 Starting Rovo Dev..."' >> /home/rovodev/entrypoint.sh && \
+    echo '        echo "Current directory: $(pwd)"' >> /home/rovodev/entrypoint.sh && \
+    echo '        echo "Files in workspace:"' >> /home/rovodev/entrypoint.sh && \
+    echo '        ls -la' >> /home/rovodev/entrypoint.sh && \
+    echo '        echo ""' >> /home/rovodev/entrypoint.sh && \
+    echo '        echo "🤖 Launching Rovo Dev AI Assistant..."' >> /home/rovodev/entrypoint.sh && \
+    echo '        exec acli rovodev run' >> /home/rovodev/entrypoint.sh && \
+    echo '    else' >> /home/rovodev/entrypoint.sh && \
+    echo '        echo "⚠️  rovodev utility not found. Please ensure you have the latest acli version."' >> /home/rovodev/entrypoint.sh && \
+    echo '        echo "Available acli commands:"' >> /home/rovodev/entrypoint.sh && \
+    echo '        acli --help 2>/dev/null || echo "acli command not found"' >> /home/rovodev/entrypoint.sh && \
+    echo '        echo ""' >> /home/rovodev/entrypoint.sh && \
+    echo '        echo "🚀 Starting interactive shell instead..."' >> /home/rovodev/entrypoint.sh && \
+    echo '        exec /bin/bash' >> /home/rovodev/entrypoint.sh && \
+    echo '    fi' >> /home/rovodev/entrypoint.sh && \
+    echo '}' >> /home/rovodev/entrypoint.sh && \
     echo '' >> /home/rovodev/entrypoint.sh && \
-    echo '# Execute the command passed to docker run, or start an interactive shell' >> /home/rovodev/entrypoint.sh && \
+    echo '# Execute the command passed to docker run, or start rovodev automatically' >> /home/rovodev/entrypoint.sh && \
     echo 'if [ "$#" -eq 0 ]; then' >> /home/rovodev/entrypoint.sh && \
-    echo '    echo "🚀 Starting interactive shell..."' >> /home/rovodev/entrypoint.sh && \
-    echo '    echo "Current directory: $(pwd)"' >> /home/rovodev/entrypoint.sh && \
-    echo '    echo "Available commands: acli, git, python3, node, npm, curl, wget, jq"' >> /home/rovodev/entrypoint.sh && \
-    echo '    exec /bin/bash' >> /home/rovodev/entrypoint.sh && \
+    echo '    start_rovodev' >> /home/rovodev/entrypoint.sh && \
     echo 'else' >> /home/rovodev/entrypoint.sh && \
     echo '    exec "$@"' >> /home/rovodev/entrypoint.sh && \
     echo 'fi' >> /home/rovodev/entrypoint.sh
@@ -115,5 +123,5 @@ CMD []
 
 # Add labels for better container management
 LABEL maintainer="rovodev-user"
-LABEL description="Atlassian CLI with rovodev utility for ad-hoc development environments"
-LABEL version="1.0"
+LABEL description="Atlassian CLI with rovodev utility - auto-launches AI assistant"
+LABEL version="2.0"

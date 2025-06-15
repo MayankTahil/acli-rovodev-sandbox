@@ -5,6 +5,7 @@ A containerized environment for Atlassian's AI coding agent: **Rovo Dev** (Beta)
 ## Features
 
 - 🤖 **Rovo Dev**: Atlassian's AI coding agent in a container
+- 🚀 **Auto-start**: Automatically launches `acli rovodev run` after authentication
 - 🔐 **Auto-authentication**: Set credentials once, auto-login on container start
 - 📁 **Local mounting**: Your current directory mounted to `/workspace`
 - 🛠️ **Dev tools**: git, python3, nodejs, npm, curl, wget, jq included
@@ -13,6 +14,7 @@ A containerized environment for Atlassian's AI coding agent: **Rovo Dev** (Beta)
 ## Status: ✅ Working
 
 - acli installed with multi-architecture support (AMD64/ARM64)
+- **Auto-launch**: Container automatically starts `acli rovodev run` after authentication
 - Rovo Dev commands available
 - Local file access working
 - **Fixed**: Apple Silicon (M1/M2/M3) compatibility issues resolved
@@ -43,10 +45,15 @@ CONTAINER_NAME=rovodev-workspace
 
 ### 2. Run the Container
 
-**Easy way:**
+**Easy way (auto-starts Rovo Dev):**
 ```bash
 ./run-rovodev.sh
 ```
+
+The container will automatically:
+1. Authenticate with your Atlassian credentials
+2. Launch `acli rovodev run` 
+3. Start the AI assistant in your workspace
 
 **Manual way:**
 ```bash
@@ -61,11 +68,17 @@ docker run -it --platform linux/amd64 --env-file .env -v $(pwd):/workspace rovod
 
 ### 3. Using the Container
 
+**Default behavior:** The container automatically starts `acli rovodev run` and you can immediately begin interacting with the AI assistant.
+
+**Manual commands (if needed):**
 ```bash
+# Start a shell instead of auto-launching rovodev
+docker run -it --env-file .env -v $(pwd):/workspace rovodev:latest /bin/bash
+
 # Check authentication status
 acli rovodev auth status
 
-# Use Rovo Dev commands
+# Use Rovo Dev commands manually
 acli rovodev --help
 
 # Your local files are in /workspace
