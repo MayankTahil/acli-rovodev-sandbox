@@ -1,4 +1,4 @@
-# Rovodev Docker Environment
+# Rovodev Docker Environment (For Apple Silicon Mac)
 
 A containerized environment for Atlassian's AI coding agent: **Rovo Dev** (Beta). This Docker setup provides the Atlassian CLI (acli) with automatic authentication and local directory mounting.
 
