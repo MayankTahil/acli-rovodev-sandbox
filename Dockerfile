@@ -30,6 +30,18 @@ RUN apt-get update && apt-get install -y \
     sudo \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Docker
+RUN apt-get update && \
+    apt-get install -y apt-transport-https && \
+    install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
+    chmod a+r /etc/apt/keyrings/docker.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+    apt-get update && \
+    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && \
+    rm -rf /var/lib/apt/lists/*
+
 # Install acli (Atlassian CLI) with architecture detection
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
@@ -48,72 +60,30 @@ RUN ARCH=$(uname -m) && \
 # Create workspace directory with proper permissions
 RUN mkdir -p /workspace && chown rovodev:rovodev /workspace
 
+# Create persistence directory with proper permissions
+RUN mkdir -p /persistence && chown rovodev:rovodev /persistence
+
 # Create config directory for acli
 RUN mkdir -p /home/rovodev/.config/acli && chown -R rovodev:rovodev /home/rovodev/.config
 
 # Add rovodev user to sudoers for package installation
 RUN echo "rovodev ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
+# Add rovodev user to the docker group to allow running docker commands without sudo
+RUN groupadd -f docker && usermod -aG docker rovodev
+
+# Copy entrypoint script
+COPY entrypoint.sh /home/rovodev/entrypoint.sh
+
+# Make entrypoint script executable and set proper ownership
+USER root
+RUN chmod +x /home/rovodev/entrypoint.sh && chown rovodev:rovodev /home/rovodev/entrypoint.sh
+
 # Switch to non-root user
 USER rovodev
 
 # Set working directory
 WORKDIR /workspace
-
-# Create entrypoint script for automatic authentication
-RUN echo '#!/bin/bash' > /home/rovodev/entrypoint.sh && \
-    echo '' >> /home/rovodev/entrypoint.sh && \
-    echo '# Function to setup acli authentication' >> /home/rovodev/entrypoint.sh && \
-    echo 'setup_acli_auth() {' >> /home/rovodev/entrypoint.sh && \
-    echo '    if [ -n "$ATLASSIAN_API_TOKEN" ] && [ -n "$ATLASSIAN_USERNAME" ]; then' >> /home/rovodev/entrypoint.sh && \
-    echo '        echo "Setting up acli authentication..."' >> /home/rovodev/entrypoint.sh && \
-    echo '        mkdir -p /home/rovodev/.config/acli' >> /home/rovodev/entrypoint.sh && \
-    echo '        echo "$ATLASSIAN_API_TOKEN" | acli rovodev auth login --email "$ATLASSIAN_USERNAME" --token' >> /home/rovodev/entrypoint.sh && \
-    echo '        if [ $? -eq 0 ]; then' >> /home/rovodev/entrypoint.sh && \
-    echo '            echo "✅ acli authentication successful!"' >> /home/rovodev/entrypoint.sh && \
-    echo '        else' >> /home/rovodev/entrypoint.sh && \
-    echo '            echo "❌ acli authentication failed. Please check your credentials."' >> /home/rovodev/entrypoint.sh && \
-    echo '        fi' >> /home/rovodev/entrypoint.sh && \
-    echo '    else' >> /home/rovodev/entrypoint.sh && \
-    echo '        echo "⚠️  Authentication environment variables not set."' >> /home/rovodev/entrypoint.sh && \
-    echo '        echo "Please set ATLASSIAN_API_TOKEN and ATLASSIAN_USERNAME"' >> /home/rovodev/entrypoint.sh && \
-    echo '        echo "You can authenticate manually using: acli rovodev auth login"' >> /home/rovodev/entrypoint.sh && \
-    echo '    fi' >> /home/rovodev/entrypoint.sh && \
-    echo '}' >> /home/rovodev/entrypoint.sh && \
-    echo '' >> /home/rovodev/entrypoint.sh && \
-    echo '# Setup authentication on container start' >> /home/rovodev/entrypoint.sh && \
-    echo 'setup_acli_auth' >> /home/rovodev/entrypoint.sh && \
-    echo '' >> /home/rovodev/entrypoint.sh && \
-    echo '# Function to start rovodev automatically' >> /home/rovodev/entrypoint.sh && \
-    echo 'start_rovodev() {' >> /home/rovodev/entrypoint.sh && \
-    echo '    if acli rovodev --help &> /dev/null; then' >> /home/rovodev/entrypoint.sh && \
-    echo '        echo "✅ acli rovodev is available!"' >> /home/rovodev/entrypoint.sh && \
-    echo '        echo "🚀 Starting Rovo Dev..."' >> /home/rovodev/entrypoint.sh && \
-    echo '        echo "Current directory: $(pwd)"' >> /home/rovodev/entrypoint.sh && \
-    echo '        echo "Files in workspace:"' >> /home/rovodev/entrypoint.sh && \
-    echo '        ls -la' >> /home/rovodev/entrypoint.sh && \
-    echo '        echo ""' >> /home/rovodev/entrypoint.sh && \
-    echo '        echo "🤖 Launching Rovo Dev AI Assistant..."' >> /home/rovodev/entrypoint.sh && \
-    echo '        exec acli rovodev run' >> /home/rovodev/entrypoint.sh && \
-    echo '    else' >> /home/rovodev/entrypoint.sh && \
-    echo '        echo "⚠️  rovodev utility not found. Please ensure you have the latest acli version."' >> /home/rovodev/entrypoint.sh && \
-    echo '        echo "Available acli commands:"' >> /home/rovodev/entrypoint.sh && \
-    echo '        acli --help 2>/dev/null || echo "acli command not found"' >> /home/rovodev/entrypoint.sh && \
-    echo '        echo ""' >> /home/rovodev/entrypoint.sh && \
-    echo '        echo "🚀 Starting interactive shell instead..."' >> /home/rovodev/entrypoint.sh && \
-    echo '        exec /bin/bash' >> /home/rovodev/entrypoint.sh && \
-    echo '    fi' >> /home/rovodev/entrypoint.sh && \
-    echo '}' >> /home/rovodev/entrypoint.sh && \
-    echo '' >> /home/rovodev/entrypoint.sh && \
-    echo '# Execute the command passed to docker run, or start rovodev automatically' >> /home/rovodev/entrypoint.sh && \
-    echo 'if [ "$#" -eq 0 ]; then' >> /home/rovodev/entrypoint.sh && \
-    echo '    start_rovodev' >> /home/rovodev/entrypoint.sh && \
-    echo 'else' >> /home/rovodev/entrypoint.sh && \
-    echo '    exec "$@"' >> /home/rovodev/entrypoint.sh && \
-    echo 'fi' >> /home/rovodev/entrypoint.sh
-
-# Make entrypoint script executable and set proper ownership
-RUN chmod +x /home/rovodev/entrypoint.sh && chown rovodev:rovodev /home/rovodev/entrypoint.sh
 
 # Set entrypoint
 ENTRYPOINT ["/home/rovodev/entrypoint.sh"]
@@ -123,5 +93,5 @@ CMD []
 
 # Add labels for better container management
 LABEL maintainer="rovodev-user"
-LABEL description="Atlassian CLI with rovodev utility - auto-launches AI assistant"
-LABEL version="2.0"
+LABEL description="Atlassian CLI with rovodev utility and Docker support - auto-launches AI assistant"
+LABEL version="2.2"

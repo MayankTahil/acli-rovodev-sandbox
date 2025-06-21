@@ -47,6 +47,7 @@ yarn-error.log*
 # Temporary files
 *.tmp
 tmp_code_*
+.dockerfile_hash
 
 # OS generated files
 Thumbs.db
