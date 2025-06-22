@@ -75,6 +75,7 @@ RUN mkdir -p /home/rovodev/.ssh && chmod 700 /home/rovodev/.ssh && chown -R rovo
 RUN echo "rovodev ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Add rovodev user to the docker group to allow running docker commands without sudo
+# Note: The Docker socket permissions are also fixed in entrypoint.sh to ensure proper access
 RUN groupadd -f docker && usermod -aG docker rovodev
 
 # Copy entrypoint script
