@@ -27,13 +27,15 @@ A containerized environment for Atlassian's AI coding agent: **Rovo Dev** (Beta)
 
 ### 1. Setup Environment Variables
 
-Copy the `.env.template` file to `.env` and fill in your Atlassian credentials:
+The script will automatically create a `.env` file in the `.rovodev` directory. You can edit it with your Atlassian credentials:
 
 ```bash
-cp .env.template .env
+# The file will be created at ./.rovodev/.env
+# You can edit it directly:
+nano ./.rovodev/.env
 ```
 
-Edit `.env` with your details:
+Edit `.rovodev/.env` with your details:
 ```bash
 ATLASSIAN_USERNAME=your.email@company.com
 ATLASSIAN_API_TOKEN=your_api_token_here
@@ -80,11 +82,11 @@ The container will automatically:
 ```bash
 # For Apple Silicon (M1/M2/M3)
 docker build --platform linux/arm64 -t rovodev:latest .
-docker run -it --platform linux/arm64 --env-file .env -v $(pwd):/workspace -v /var/run/docker.sock:/var/run/docker.sock rovodev:latest
+docker run -it --platform linux/arm64 --env-file ./.rovodev/.env -v $(pwd):/workspace -v /var/run/docker.sock:/var/run/docker.sock rovodev:latest
 
 # For Intel/AMD64
 docker build --platform linux/amd64 -t rovodev:latest .
-docker run -it --platform linux/amd64 --env-file .env -v $(pwd):/workspace -v /var/run/docker.sock:/var/run/docker.sock rovodev:latest
+docker run -it --platform linux/amd64 --env-file ./.rovodev/.env -v $(pwd):/workspace -v /var/run/docker.sock:/var/run/docker.sock rovodev:latest
 ```
 
 ### 3. Using the Container
@@ -94,7 +96,7 @@ docker run -it --platform linux/amd64 --env-file .env -v $(pwd):/workspace -v /v
 **Manual commands (if needed):**
 ```bash
 # Start a shell instead of auto-launching rovodev
-docker run -it --env-file .env -v $(pwd):/workspace -v /var/run/docker.sock:/var/run/docker.sock rovodev:latest /bin/bash
+docker run -it --env-file ./.rovodev/.env -v $(pwd):/workspace -v /var/run/docker.sock:/var/run/docker.sock rovodev:latest /bin/bash
 
 # Check authentication status
 acli rovodev auth status
@@ -217,8 +219,8 @@ docker run --rm my-test-image
 - The script now automatically detects your architecture and builds accordingly
 
 **Authentication Issues:**
-- Verify your `.env` file has correct email and API token
-- Test: `docker run --rm --env-file .env -v $(pwd):/workspace -v /var/run/docker.sock:/var/run/docker.sock rovodev:latest bash -c "acli rovodev auth status"`
+- Verify your `.rovodev/.env` file has correct email and API token
+- Test: `docker run --rm --env-file ./.rovodev/.env -v $(pwd):/workspace -v /var/run/docker.sock:/var/run/docker.sock rovodev:latest bash -c "acli rovodev auth status"`
 
 **Persistence Issues:**
 - If persistence isn't working, check if the directory exists: `ls -la ~/.rovodev/persistence`
@@ -233,7 +235,7 @@ docker run --rm my-test-image
 .
 ├── Dockerfile           # Container definition
 ├── entrypoint.sh        # Container entrypoint script
-├── .env.template        # Environment template
+├── .env.template        # Environment template (for reference)
 ├── .gitignore           # Git ignore rules
 ├── run-rovodev.sh       # Helper script
 └── README.md            # This file

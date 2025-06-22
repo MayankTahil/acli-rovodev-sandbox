@@ -1,0 +1,23 @@
+# Git and environment files
+.git
+.gitignore
+.env*
+
+# Documentation (except README)
+*.md
+!README.md
+
+# Temporary files
+*.tmp
+*.log
+.DS_Store
+tmp_code_*
+
+# IDE files
+.vscode
+.idea
+*.swp
+
+# Secrets
+*.key
+*.pem

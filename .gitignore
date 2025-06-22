@@ -15,6 +15,18 @@
 .env.local
 .env.production
 .env.development
+.rovodev/.env
+
+# Rovodev directory - include directory structure but ignore contents
+.rovodev/*
+# But keep the directory structure
+!.rovodev/.gitkeep
+!.rovodev/persistence/
+.rovodev/persistence/*
+!.rovodev/persistence/.gitkeep
+!.rovodev/persistence/shared/
+.rovodev/persistence/shared/*
+!.rovodev/persistence/shared/.gitkeep
 
 # macOS
 .DS_Store
@@ -39,9 +51,6 @@
 Network Trash Folder
 Temporary Items
 .apdisk
-
-# Docker
-.dockerignore
 
 # IDE files
 .vscode/

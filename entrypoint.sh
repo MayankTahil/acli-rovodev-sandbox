@@ -90,6 +90,61 @@ setup_persistence() {
 # Setup authentication on container start
 setup_acli_auth
 
+# Check for Docker access
+echo "🐳 Checking Docker access..."
+
+# Try to get Docker info
+if docker info > /dev/null 2>&1; then
+    echo "✅ Docker access is working!"
+    docker version | grep -E "Server:|Client:" || true
+else
+    # Check if Docker socket exists
+    if [ -e /var/run/docker.sock ]; then
+        echo "🔍 Docker socket found at /var/run/docker.sock"
+        echo "Current permissions: $(ls -la /var/run/docker.sock 2>/dev/null || echo 'Cannot access permissions')"
+        echo "Current user: $(whoami), groups: $(groups)"
+        
+        # Try to fix permissions
+        echo "⚙️ Attempting to fix Docker socket permissions..."
+        if sudo chmod 666 /var/run/docker.sock 2>/dev/null; then
+            echo "✅ Docker socket permissions updated!"
+            
+            # Test Docker access again
+            if docker info > /dev/null 2>&1; then
+                echo "✅ Docker access successful after permission fix!"
+            else
+                echo "⚠️ Still having issues with Docker access."
+            fi
+        else
+            echo "⚠️ Could not change socket permissions with sudo."
+        fi
+    else
+        # Check for DOCKER_HOST environment variable
+        if [ -n "$DOCKER_HOST" ]; then
+            echo "🔄 Using DOCKER_HOST: $DOCKER_HOST"
+            echo "⚠️ Docker daemon connection failed. Make sure Docker is running on the host."
+        else
+            echo "⚠️ Docker socket not found and DOCKER_HOST not set."
+            echo "Docker functionality will not be available inside this container."
+        fi
+    fi
+    
+    # Print troubleshooting information
+    echo ""
+    echo "🔧 Docker Troubleshooting:"
+    echo "1. Make sure Docker daemon is running on the host"
+    echo "2. For macOS: Docker Desktop must be running with file sharing enabled"
+    echo "3. Try restarting the container with '--privileged' flag"
+    echo "4. Check Docker version compatibility between host and container"
+    
+    # Try to get system information for debugging
+    echo ""
+    echo "📊 System Information:"
+    echo "OS: $(uname -a)"
+    echo "Docker Client: $(docker --version 2>/dev/null || echo 'Not available')"
+    echo "Container: $([ -f /etc/os-release ] && cat /etc/os-release | grep PRETTY_NAME || echo 'Unknown')"
+fi
+
 # Setup persistence
 setup_persistence
 
@@ -100,7 +155,7 @@ if [ -n "$GIT_USERNAME" ] && [ -n "$GIT_PASSWORD" ]; then
     echo "✅ Git credentials configured successfully!"
 else
     echo "⚠️  Git credentials not found in environment variables."
-    echo "To use Git without password prompts, set GIT_USERNAME and GIT_PASSWORD in your .env file."
+    echo "To use Git without password prompts, set GIT_USERNAME and GIT_PASSWORD in your .rovodev/.env file."
 fi
 
 # Set Git user information if provided
