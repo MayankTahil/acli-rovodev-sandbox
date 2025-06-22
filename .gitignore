@@ -15,6 +15,10 @@
 .env.local
 .env.production
 .env.development
+.rovodev/.env
+
+# Rovodev persistence directory
+.rovodev/persistence/
 
 # macOS
 .DS_Store
