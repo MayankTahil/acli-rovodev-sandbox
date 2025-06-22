@@ -93,6 +93,23 @@ setup_acli_auth
 # Setup persistence
 setup_persistence
 
+# Check SSH agent forwarding
+if [ -n "$SSH_AUTH_SOCK" ]; then
+    echo "🔑 SSH agent forwarding detected at: $SSH_AUTH_SOCK"
+    # Test SSH agent connection
+    if ssh-add -l &>/dev/null; then
+        echo "✅ SSH agent connection successful!"
+        echo "Available SSH keys:"
+        ssh-add -l
+    else
+        echo "⚠️  SSH agent detected but connection failed. Error code: $?"
+        echo "This might be due to the 1Password app not being unlocked or SSH agent not running."
+    fi
+else
+    echo "⚠️  No SSH agent forwarding detected. SSH operations might require password authentication."
+    echo "To use 1Password SSH agent, ensure it's running and SSH_AUTH_SOCK is set on the host."
+fi
+
 # Function to start rovodev automatically
 start_rovodev() {
     if acli rovodev --help &> /dev/null; then

@@ -11,6 +11,7 @@ A containerized environment for Atlassian's AI coding agent: **Rovo Dev** (Beta)
 - 🧠 **Persistence**: Optional shared or instance-specific persistence storage
 - 🛠️ **Dev tools**: git, python3, nodejs, npm, curl, wget, jq included
 - 🐳 **Docker-in-Docker**: Run Docker commands and containers from within the container
+- 🔑 **SSH Agent Forwarding**: Compatible with 1Password SSH agent for secure key management
 - 🔒 **Secure**: Non-root user with sudo access
 
 ## Status: ✅ Working
@@ -139,6 +140,43 @@ Persistence data is stored in `./.rovodev/persistence/` on your host machine:
 - Instance mode: `./.rovodev/persistence/instance-{ID}/`
 
 You can examine or back up this directory as needed.
+
+## SSH Agent Forwarding with 1Password
+
+This container supports SSH agent forwarding, making it compatible with the 1Password SSH agent. This allows you to use SSH keys stored in your 1Password vault from within the container without exposing the private keys to the container filesystem.
+
+### Setup 1Password SSH Agent
+
+1. Ensure you have 1Password installed and the SSH agent feature enabled:
+   - On macOS: The socket is typically at `~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock`
+   - On Linux: The socket is typically at `~/.1password/agent.sock`
+
+2. Make sure your SSH config is using the 1Password SSH agent:
+   ```
+   # ~/.ssh/config
+   Host *
+     IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
+   ```
+
+3. Verify the SSH agent is running and the `SSH_AUTH_SOCK` environment variable is set:
+   ```bash
+   echo $SSH_AUTH_SOCK
+   ssh-add -l  # Should list your keys from 1Password
+   ```
+
+### Using SSH Keys in the Container
+
+The container automatically detects your SSH agent socket and forwards it appropriately:
+
+- On macOS/Windows with Docker Desktop: Uses the special `/run/host-services/ssh-auth.sock` path
+- On Linux: Directly mounts your host's SSH agent socket
+
+When you run SSH commands inside the container (like `git clone` from a private repository), the authentication request will be forwarded to your 1Password app on the host, which will prompt you for authorization.
+
+To test if SSH agent forwarding is working inside the container:
+```bash
+ssh-add -l  # Should list the same keys as on your host
+```
 
 ## Docker-in-Docker Usage
 

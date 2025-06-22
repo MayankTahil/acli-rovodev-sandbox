@@ -28,6 +28,7 @@ RUN apt-get update && apt-get install -y \
     vim \
     nano \
     sudo \
+    openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Docker
@@ -66,6 +67,10 @@ RUN mkdir -p /persistence && chown rovodev:rovodev /persistence
 # Create config directory for acli
 RUN mkdir -p /home/rovodev/.config/acli && chown -R rovodev:rovodev /home/rovodev/.config
 
+# Create SSH directory for the user
+RUN mkdir -p /home/rovodev/.ssh && chmod 700 /home/rovodev/.ssh && chown -R rovodev:rovodev /home/rovodev/.ssh
+
+
 # Add rovodev user to sudoers for package installation
 RUN echo "rovodev ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
@@ -74,6 +79,10 @@ RUN groupadd -f docker && usermod -aG docker rovodev
 
 # Copy entrypoint script
 COPY entrypoint.sh /home/rovodev/entrypoint.sh
+
+# Create init folder
+RUN mkdir -p /init
+COPY ./init /init
 
 # Make entrypoint script executable and set proper ownership
 USER root

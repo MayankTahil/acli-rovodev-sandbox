@@ -33,14 +33,19 @@ show_help() {
     echo "Usage: ./run-rovodev.sh [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  --rebuild                  Force rebuild of Docker image"
+    echo "  --rebuild                  Rebuild Docker image (only rebuilds when this flag is set)"
     echo "  --persistence=MODE         Enable persistence (MODE: shared, instance)"
     echo "  --instance-id=ID           Set specific instance ID for instance persistence mode"
-    echo "  --help                     Show this help message"
+    echo "  -h, --help                 Show this help message"
+    echo ""
+    echo "Features:"
+    echo "  • SSH Agent Forwarding     Automatically enabled when SSH_AUTH_SOCK is set"
+    echo "                             Compatible with 1Password SSH agent"
     echo ""
     echo "Examples:"
     echo "  ./run-rovodev.sh                           # Run with default settings"
-    echo "  ./run-rovodev.sh --rebuild                 # Force rebuild Docker image"
+    echo "  ./run-rovodev.sh -h                        # Show help message"
+    echo "  ./run-rovodev.sh --rebuild                 # Rebuild Docker image"
     echo "  ./run-rovodev.sh --persistence=shared      # Use shared persistence"
     echo "  ./run-rovodev.sh --persistence=instance    # Use instance-specific persistence"
     echo ""
@@ -48,7 +53,7 @@ show_help() {
 
 # Check for help flag
 for arg in "$@"; do
-    if [ "$arg" == "--help" ]; then
+    if [ "$arg" == "--help" ] || [ "$arg" == "-h" ]; then
         show_help
         exit 0
     fi
@@ -147,9 +152,10 @@ if [ -n "$PERSISTENCE_MODE" ]; then
     print_feature "Persistence directory: ${PERSISTENCE_DIR}"
 fi
 
-# Check if Dockerfile has been modified since last build
+# Check if we need to rebuild the Docker image
 NEED_REBUILD=false
 if [ "$REBUILD" = true ]; then
+    print_status "Force rebuild flag detected. Will rebuild Docker image."
     NEED_REBUILD=true
 elif ! docker image inspect rovodev:latest >/dev/null 2>&1; then
     print_status "Docker image doesn't exist. Will build it."
@@ -165,34 +171,10 @@ else
         STORED_HASH=$(cat "$HASH_FILE")
     fi
     
-    # If hash calculation failed, use timestamp comparison as fallback
-    if [[ "$CURRENT_DOCKERFILE_HASH" == "HASH_ERROR" ]]; then
-        print_warning "Hash calculation failed. Falling back to timestamp comparison."
-        
-        # Get the last modification time of the Dockerfile
-        DOCKERFILE_MTIME=$(stat -c %Y Dockerfile 2>/dev/null || stat -f %m Dockerfile)
-        
-        # Get the creation time of the Docker image - handle both Linux and macOS date formats
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-            # macOS
-            IMAGE_CREATED=$(docker inspect -f '{{.Created}}' rovodev:latest | xargs -I{} date -j -f "%Y-%m-%dT%H:%M:%S" "$(echo {} | cut -d. -f1)" +%s 2>/dev/null || echo "")
-        else
-            # Linux and others
-            IMAGE_CREATED=$(docker inspect -f '{{.Created}}' rovodev:latest | xargs date +%s -d 2>/dev/null || echo "")
-        fi
-        
-        # If stat command failed or IMAGE_CREATED is empty, force rebuild
-        if [ -z "$DOCKERFILE_MTIME" ] || [ -z "$IMAGE_CREATED" ]; then
-            print_warning "Could not determine modification times. Rebuilding to be safe."
-            NEED_REBUILD=true
-        elif [ "$DOCKERFILE_MTIME" -gt "$IMAGE_CREATED" ]; then
-            print_status "Dockerfile has been modified since last build. Rebuilding image."
-            NEED_REBUILD=true
-        fi
-    # Compare current hash with stored hash
-    elif [ -z "$STORED_HASH" ] || [[ "$CURRENT_DOCKERFILE_HASH" != "$STORED_HASH" ]]; then
-        print_status "Dockerfile has been modified since last build. Rebuilding image."
-        NEED_REBUILD=true
+    # Check if Dockerfile has been modified
+    if [[ "$CURRENT_DOCKERFILE_HASH" != "HASH_ERROR" ]] && [ -n "$STORED_HASH" ] && [[ "$CURRENT_DOCKERFILE_HASH" != "$STORED_HASH" ]]; then
+        print_warning "Dockerfile has been modified since last build."
+        print_warning "Use --rebuild flag to rebuild the Docker image with these changes."
     fi
 fi
 
@@ -207,7 +189,8 @@ if [ "$NEED_REBUILD" = true ]; then
         print_status "Saved Dockerfile hash for future comparison."
     fi
 else
-    print_status "Using existing Docker image. Use --rebuild flag to force rebuild."
+    print_status "Using existing Docker image."
+    print_status "Use --rebuild flag if you want to rebuild the image."
 fi
 
 # Stop and remove existing container if it exists
@@ -219,6 +202,34 @@ fi
 
 # Get the current directory for mounting
 CURRENT_DIR=$(pwd)
+
+# Setup SSH agent forwarding for 1Password integration
+SSH_AGENT_MOUNT=""
+CONTAINER_SSH_AUTH_SOCK=""
+
+if [ -n "$SSH_AUTH_SOCK" ]; then
+    print_status "Detected SSH agent socket at: $SSH_AUTH_SOCK"
+    
+    # Check if we're on Docker Desktop (macOS/Windows)
+    if [[ "$OSTYPE" == "darwin"* ]] || [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
+        # Docker Desktop provides a special path for SSH agent forwarding
+        print_status "Using Docker Desktop SSH agent forwarding"
+        SSH_AGENT_MOUNT="-v /run/host-services/ssh-auth.sock:/run/host-services/ssh-auth.sock"
+        CONTAINER_SSH_AUTH_SOCK="/run/host-services/ssh-auth.sock"
+    else
+        # Linux - direct socket mounting
+        print_status "Using direct SSH agent socket mounting"
+        SSH_AGENT_MOUNT="-v $SSH_AUTH_SOCK:/tmp/ssh-agent.sock"
+        CONTAINER_SSH_AUTH_SOCK="/tmp/ssh-agent.sock"
+    fi
+    
+    print_feature "SSH agent forwarding enabled (1Password compatible)"
+else
+    print_warning "No SSH agent detected. SSH agent forwarding will not be available."
+    print_warning "To use 1Password SSH agent, ensure it's running and SSH_AUTH_SOCK is set."
+    # Set empty values to avoid errors in docker run command
+    CONTAINER_SSH_AUTH_SOCK=""
+fi
 
 print_status "Starting rovodev container..."
 print_status "Mounting current directory: ${CURRENT_DIR} -> /workspace"
@@ -232,6 +243,10 @@ docker run -it \
     -v "${CURRENT_DIR}:/workspace" \
     ${PERSISTENCE_MOUNT} \
     -v /var/run/docker.sock:/var/run/docker.sock \
+    -v "${HOME}/.ssh/config:/home/rovodev/.ssh/config:ro" \
+    -v "${HOME}/.ssh/known_hosts:/home/rovodev/.ssh/known_hosts:ro" \
+    ${SSH_AGENT_MOUNT} \
+    -e SSH_AUTH_SOCK="${CONTAINER_SSH_AUTH_SOCK}" \
     -w /workspace \
     rovodev:latest
 
