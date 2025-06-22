@@ -93,21 +93,36 @@ setup_acli_auth
 # Setup persistence
 setup_persistence
 
-# Check SSH agent forwarding
-if [ -n "$SSH_AUTH_SOCK" ]; then
-    echo "🔑 SSH agent forwarding detected at: $SSH_AUTH_SOCK"
-    # Test SSH agent connection
-    if ssh-add -l &>/dev/null; then
-        echo "✅ SSH agent connection successful!"
-        echo "Available SSH keys:"
-        ssh-add -l
-    else
-        echo "⚠️  SSH agent detected but connection failed. Error code: $?"
-        echo "This might be due to the 1Password app not being unlocked or SSH agent not running."
-    fi
+# Setup Git credentials
+echo "🔑 Setting up Git credentials..."
+if [ -n "$GIT_USERNAME" ] && [ -n "$GIT_PASSWORD" ]; then
+    git config --global credential.helper '!f() { echo "username=$GIT_USERNAME"; echo "password=$GIT_PASSWORD"; }; f'
+    echo "✅ Git credentials configured successfully!"
 else
-    echo "⚠️  No SSH agent forwarding detected. SSH operations might require password authentication."
-    echo "To use 1Password SSH agent, ensure it's running and SSH_AUTH_SOCK is set on the host."
+    echo "⚠️  Git credentials not found in environment variables."
+    echo "To use Git without password prompts, set GIT_USERNAME and GIT_PASSWORD in your .env file."
+fi
+
+# Set Git user information if provided
+if [ -n "$GIT_USER_NAME" ]; then
+    git config --global user.name "$GIT_USER_NAME"
+    echo "👤 Git user.name set to: $GIT_USER_NAME"
+fi
+
+if [ -n "$GIT_USER_EMAIL" ]; then
+    git config --global user.email "$GIT_USER_EMAIL"
+    echo "📧 Git user.email set to: $GIT_USER_EMAIL"
+fi
+
+# Test Git credential configuration
+echo "🔒 Using Git credentials from environment variables for authentication"
+if [ -n "$GIT_USERNAME" ] && [ -n "$GIT_PASSWORD" ]; then
+    # Test Git configuration
+    if git config --global --get credential.helper | grep -q '!f()'; then
+        echo "✅ Git credential helper is properly configured"
+    else
+        echo "⚠️  Git credential helper configuration issue. Please check the setup."
+    fi
 fi
 
 # Function to start rovodev automatically

@@ -203,33 +203,9 @@ fi
 # Get the current directory for mounting
 CURRENT_DIR=$(pwd)
 
-# Setup SSH agent forwarding for 1Password integration
-SSH_AGENT_MOUNT=""
-CONTAINER_SSH_AUTH_SOCK=""
-
-if [ -n "$SSH_AUTH_SOCK" ]; then
-    print_status "Detected SSH agent socket at: $SSH_AUTH_SOCK"
-    
-    # Check if we're on Docker Desktop (macOS/Windows)
-    if [[ "$OSTYPE" == "darwin"* ]] || [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
-        # Docker Desktop provides a special path for SSH agent forwarding
-        print_status "Using Docker Desktop SSH agent forwarding"
-        SSH_AGENT_MOUNT="-v /run/host-services/ssh-auth.sock:/run/host-services/ssh-auth.sock"
-        CONTAINER_SSH_AUTH_SOCK="/run/host-services/ssh-auth.sock"
-    else
-        # Linux - direct socket mounting
-        print_status "Using direct SSH agent socket mounting"
-        SSH_AGENT_MOUNT="-v $SSH_AUTH_SOCK:/tmp/ssh-agent.sock"
-        CONTAINER_SSH_AUTH_SOCK="/tmp/ssh-agent.sock"
-    fi
-    
-    print_feature "SSH agent forwarding enabled (1Password compatible)"
-else
-    print_warning "No SSH agent detected. SSH agent forwarding will not be available."
-    print_warning "To use 1Password SSH agent, ensure it's running and SSH_AUTH_SOCK is set."
-    # Set empty values to avoid errors in docker run command
-    CONTAINER_SSH_AUTH_SOCK=""
-fi
+# Using environment variables for Git authentication instead of SSH agent forwarding
+print_feature "Using environment variables for Git authentication"
+print_status "Make sure GIT_USERNAME and GIT_PASSWORD are set in your .env file"
 
 print_status "Starting rovodev container..."
 print_status "Mounting current directory: ${CURRENT_DIR} -> /workspace"
@@ -243,10 +219,6 @@ docker run -it \
     -v "${CURRENT_DIR}:/workspace" \
     ${PERSISTENCE_MOUNT} \
     -v /var/run/docker.sock:/var/run/docker.sock \
-    -v "${HOME}/.ssh/config:/home/rovodev/.ssh/config:ro" \
-    -v "${HOME}/.ssh/known_hosts:/home/rovodev/.ssh/known_hosts:ro" \
-    ${SSH_AGENT_MOUNT} \
-    -e SSH_AUTH_SOCK="${CONTAINER_SSH_AUTH_SOCK}" \
     -w /workspace \
     rovodev:latest
 
