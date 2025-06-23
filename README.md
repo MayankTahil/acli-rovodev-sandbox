@@ -11,7 +11,10 @@ A containerized environment for Atlassian's AI coding agent: **Rovo Dev** (Beta)
 - 🧠 **Persistence**: Optional shared or instance-specific persistence storage
 - 🛠️ **Dev tools**: git, python3, nodejs, npm, curl, wget, jq included
 - 🐳 **Docker-in-Docker**: Run Docker commands and containers from within the container
+<<<<<<< HEAD
 - 🔑 **SSH Agent Forwarding**: Compatible with 1Password SSH agent for secure key management
+=======
+>>>>>>> 6c1c1dc (Update README.md file structure)
 - 🔒 **Secure**: Non-root user with sudo access
 
 ## Status: ✅ Working
@@ -143,6 +146,7 @@ Persistence data is stored in `./.rovodev/persistence/` on your host machine:
 
 You can examine or back up this directory as needed.
 
+<<<<<<< HEAD
 ## SSH Agent Forwarding with 1Password
 
 This container supports SSH agent forwarding, making it compatible with the 1Password SSH agent. This allows you to use SSH keys stored in your 1Password vault from within the container without exposing the private keys to the container filesystem.
@@ -181,6 +185,10 @@ ssh-add -l  # Should list the same keys as on your host
 ```
 
 ## Docker-in-Docker Usage
+=======
+
+## Docker-out-of-Docker Usage
+>>>>>>> 6c1c1dc (Update README.md file structure)
 
 The container includes Docker CLI tools, allowing you to run Docker commands from within the container. This is useful for:
 
@@ -230,20 +238,10 @@ docker run --rm my-test-image
 - Force ARM64: `docker build --platform linux/arm64 -t rovodev:latest .`
 - Force AMD64: `docker build --platform linux/amd64 -t rovodev:latest .`
 
-## Automatic Docker Image Building
-
-This repository is configured with GitHub Actions to automatically build Docker images for both x86_64 (AMD64) and ARM64 architectures whenever there's a change to the Dockerfile. See [GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md) for setup instructions.
-
-**Available Docker Images:**
-- `username/rovodev:x86_64` - Specific to x86_64 architecture
-- `username/rovodev:arm64` - Specific to ARM64 architecture
-- `username/rovodev:latest` - Multi-platform image (works on both architectures)
-
-Replace `username` with your Docker Hub username after setting up GitHub Actions.
-
 **File Structure:**
 ```
 .
+<<<<<<< HEAD
 ├── Dockerfile                      # Container definition
 ├── entrypoint.sh                   # Container entrypoint script
 ├── .env.template                   # Environment template (for reference)
@@ -256,4 +254,46 @@ Replace `username` with your Docker Hub username after setting up GitHub Actions
 │       └── docker-build.yml        # GitHub Actions workflow for Docker builds
 └── .rovodev/                       # Persistence directory
     └── persistence/                # Data persistence
+=======
+├── Dockerfile           # Container definition
+├── entrypoint.sh        # Container entrypoint script
+├── .env.template        # Environment template (for reference)
+├── .gitignore           # Git ignore rules
+├── run-rovodev.sh       # Helper script
+└── README.md            # This file
+>>>>>>> 6c1c1dc (Update README.md file structure)
 ```
+
+## Setting up the `rdev-new` Command
+
+Pre-req: You already build the docker image based on this dockerfile and it's stored on your host as `rovodev:latest`
+
+If you don't have the docker image built and available, clone this git repository and execute the following command: 
+
+```bash
+docker
+```
+
+
+To create a shortcut command that downloads and executes the latest version of the RovoDev script, follow these steps:
+
+### Automatic set-up
+
+Run the following command to set up the `rdev-new` shortcut in one step:
+
+```bash
+echo '#!/bin/bash
+curl -s https://raw.githubusercontent.com/MayankTahil/acli-rovodev-sandbox/refs/heads/main/run-rovodev.sh -o run-rovodev.sh
+chmod +x run-rovodev.sh
+./run-rovodev.sh' | sudo tee /usr/local/bin/rdev-new > /dev/null && sudo chmod +x /usr/local/bin/rdev-new
+```
+
+### Usage
+
+Once installed, you can run the command from any directory:
+
+```bash
+rdev-new
+```
+
+This will download the latest version of the script and execute it in your current directory.
