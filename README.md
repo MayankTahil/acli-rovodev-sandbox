@@ -230,13 +230,30 @@ docker run --rm my-test-image
 - Force ARM64: `docker build --platform linux/arm64 -t rovodev:latest .`
 - Force AMD64: `docker build --platform linux/amd64 -t rovodev:latest .`
 
+## Automatic Docker Image Building
+
+This repository is configured with GitHub Actions to automatically build Docker images for both x86_64 (AMD64) and ARM64 architectures whenever there's a change to the Dockerfile. See [GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md) for setup instructions.
+
+**Available Docker Images:**
+- `username/rovodev:x86_64` - Specific to x86_64 architecture
+- `username/rovodev:arm64` - Specific to ARM64 architecture
+- `username/rovodev:latest` - Multi-platform image (works on both architectures)
+
+Replace `username` with your Docker Hub username after setting up GitHub Actions.
+
 **File Structure:**
 ```
 .
-├── Dockerfile           # Container definition
-├── entrypoint.sh        # Container entrypoint script
-├── .env.template        # Environment template (for reference)
-├── .gitignore           # Git ignore rules
-├── run-rovodev.sh       # Helper script
-└── README.md            # This file
+├── Dockerfile                      # Container definition
+├── entrypoint.sh                   # Container entrypoint script
+├── .env.template                   # Environment template (for reference)
+├── .gitignore                      # Git ignore rules
+├── run-rovodev.sh                  # Helper script
+├── README.md                       # This file
+├── GITHUB_ACTIONS_SETUP.md         # GitHub Actions setup instructions
+├── .github/
+│   └── workflows/
+│       └── docker-build.yml        # GitHub Actions workflow for Docker builds
+└── .rovodev/                       # Persistence directory
+    └── persistence/                # Data persistence
 ```
