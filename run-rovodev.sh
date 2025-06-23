@@ -260,7 +260,8 @@ GIT_USER_EMAIL=
 # DOCKER_IMAGE_TAG=latest              # Tag for the built Docker image
 EOF
 fi
-print_warning "Please edit .env file with your Atlassian credentials before running again."
+print_warning "Please edit .rovodev/.env file with your Atlassian credentials before running again."
+print_status "You can edit it with: nano ${ENV_FILE}"
 exit 1
 
 # Source environment variables
