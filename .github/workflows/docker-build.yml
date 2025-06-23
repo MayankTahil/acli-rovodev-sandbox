@@ -5,6 +5,7 @@ on:
     branches: [ main ]
     paths:
       - 'Dockerfile'
+      - 'entrypoint.sh'
       - '.github/workflows/docker-build.yml'
   pull_request:
     branches: [ main ]
