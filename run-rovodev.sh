@@ -84,10 +84,28 @@ USE_PREBUILT_IMAGE=true
 
 # Function to check for Docker image
 check_docker_image() {
+    # Determine architecture
+    ARCH=$(uname -m)
+    if [[ "$ARCH" == "arm64" ]] || [[ "$ARCH" == "aarch64" ]]; then
+        ARCH_TAG="arm64"
+    elif [[ "$ARCH" == "x86_64" ]]; then
+        ARCH_TAG="x86_64"
+    else
+        print_warning "Unsupported architecture: $ARCH"
+        ARCH_TAG="x86_64"  # Default to x86_64
+    fi
+    
     # Check if rovodev:latest exists locally
     if docker image inspect rovodev:latest >/dev/null 2>&1; then
         print_status "Found local Docker image: rovodev:latest"
         DOCKER_IMAGE="rovodev:latest"
+        return 0
+    fi
+    
+    # Check if architecture-specific image exists locally
+    if docker image inspect rovodev:$ARCH_TAG >/dev/null 2>&1; then
+        print_status "Found local Docker image: rovodev:$ARCH_TAG"
+        DOCKER_IMAGE="rovodev:$ARCH_TAG"
         return 0
     fi
     
@@ -98,29 +116,74 @@ check_docker_image() {
         return 0
     fi
     
+    # Check if mayankt/rovodev-$ARCH_TAG:latest exists locally
+    if docker image inspect mayankt/rovodev-$ARCH_TAG:latest >/dev/null 2>&1; then
+        print_status "Found local Docker image: mayankt/rovodev-$ARCH_TAG:latest"
+        DOCKER_IMAGE="mayankt/rovodev-$ARCH_TAG:latest"
+        return 0
+    fi
+    
     # No local images found, ask what to do
     print_warning "No local rovodev Docker images found."
     echo ""
     echo "Options:"
-    echo "1. Pull the official Docker image (atlassian/rovodev:latest)"
-    echo "2. Exit"
+    echo "1. Pull the architecture-specific Docker image (mayankt/rovodev-$ARCH_TAG:latest)"
+    echo "2. Build from source using Dockerfile in current directory"
+    echo "3. Exit"
     echo ""
-    read -p "Please choose an option (1-2): " choice
+    read -p "Please choose an option (1-3): " choice
     
     case $choice in
         1)
-            print_status "Pulling official Docker image..."
-            if docker pull atlassian/rovodev:latest; then
-                print_status "Successfully pulled atlassian/rovodev:latest"
-                DOCKER_IMAGE="atlassian/rovodev:latest"
+            print_status "Pulling architecture-specific Docker image for $ARCH_TAG..."
+            if docker pull mayankt/rovodev-$ARCH_TAG:latest; then
+                print_status "Successfully pulled mayankt/rovodev-$ARCH_TAG:latest"
+                DOCKER_IMAGE="mayankt/rovodev-$ARCH_TAG:latest"
                 return 0
             else
-                print_error "Failed to pull official Docker image."
+                print_error "Failed to pull Docker image."
                 print_error "Please check your internet connection and try again."
                 exit 1
             fi
             ;;
         2)
+            print_status "Building Docker image from source..."
+            
+            # Check if Dockerfile exists
+            if [ ! -f "Dockerfile" ]; then
+                print_error "Dockerfile not found in current directory."
+                exit 1
+            fi
+            
+            # Check for .env variables for build
+            BUILD_PLATFORM=""
+            BUILD_TAG="${DOCKER_IMAGE_TAG:-latest}"
+            
+            # Use DOCKER_BUILD_PLATFORM from .env if available, otherwise use detected architecture
+            if [ -n "$DOCKER_BUILD_PLATFORM" ]; then
+                BUILD_PLATFORM="--platform $DOCKER_BUILD_PLATFORM"
+                print_status "Using build platform from .env: $DOCKER_BUILD_PLATFORM"
+            else
+                if [[ "$ARCH_TAG" == "arm64" ]]; then
+                    BUILD_PLATFORM="--platform linux/arm64"
+                elif [[ "$ARCH_TAG" == "x86_64" ]]; then
+                    BUILD_PLATFORM="--platform linux/amd64"
+                fi
+                print_status "Using detected build platform: ${BUILD_PLATFORM#--platform }"
+            fi
+            
+            # Build the Docker image
+            print_status "Building Docker image for $ARCH_TAG architecture with tag $BUILD_TAG..."
+            if docker build $BUILD_PLATFORM -t rovodev:$ARCH_TAG -t rovodev:$BUILD_TAG .; then
+                print_status "Successfully built Docker image: rovodev:$ARCH_TAG (also tagged as rovodev:$BUILD_TAG)"
+                DOCKER_IMAGE="rovodev:$ARCH_TAG"
+                return 0
+            else
+                print_error "Failed to build Docker image."
+                exit 1
+            fi
+            ;;
+        3)
             print_status "Exiting"
             exit 0
             ;;
@@ -131,13 +194,22 @@ check_docker_image() {
     esac
 }
 
-# Set default Docker image name
-DOCKER_IMAGE="rovodev:latest"
-
-# Check for Docker image if in standalone mode
-if [ "$STANDALONE_MODE" = true ] && [ "$USE_PREBUILT_IMAGE" = true ]; then
-    check_docker_image
+# Determine architecture for default Docker image name
+ARCH=$(uname -m)
+if [[ "$ARCH" == "arm64" ]] || [[ "$ARCH" == "aarch64" ]]; then
+    ARCH_TAG="arm64"
+elif [[ "$ARCH" == "x86_64" ]]; then
+    ARCH_TAG="x86_64"
+else
+    print_warning "Unsupported architecture: $ARCH"
+    ARCH_TAG="x86_64"  # Default to x86_64
 fi
+
+# Set default Docker image name based on architecture
+DOCKER_IMAGE="rovodev:$ARCH_TAG"
+
+# Check for Docker image
+check_docker_image
 
 # Initialize persistence variables
 PERSISTENCE_MODE=""
@@ -182,10 +254,14 @@ GIT_USER_EMAIL=
 # Persistence settings
 # PERSISTENCE_MODE=shared     # Options: shared, instance
 # INSTANCE_ID=my-instance-1   # Only used with instance mode
+
+# Docker build settings (used when building from source)
+# DOCKER_BUILD_PLATFORM=linux/amd64    # Options: linux/amd64, linux/arm64
+# DOCKER_IMAGE_TAG=latest              # Tag for the built Docker image
 EOF
-    print_status ".env file created successfully in ${ROVODEV_DIR}."
-    print_warning "Please edit ${ROVODEV_DIR}/.env file with your credentials if needed."
 fi
+print_warning "Please edit .env file with your Atlassian credentials before running again."
+exit 1
 
 # Source environment variables
 source "${ENV_FILE}"
