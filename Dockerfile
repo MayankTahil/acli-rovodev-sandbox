@@ -81,10 +81,6 @@ RUN groupadd -f docker && usermod -aG docker rovodev
 # Copy entrypoint script
 COPY entrypoint.sh /home/rovodev/entrypoint.sh
 
-# Create init folder
-RUN mkdir -p /init
-COPY ./init /init
-
 # Make entrypoint script executable and set proper ownership
 USER root
 RUN chmod +x /home/rovodev/entrypoint.sh && chown rovodev:rovodev /home/rovodev/entrypoint.sh
