@@ -259,13 +259,18 @@ GIT_USER_EMAIL=
 # DOCKER_BUILD_PLATFORM=linux/amd64    # Options: linux/amd64, linux/arm64
 # DOCKER_IMAGE_TAG=latest              # Tag for the built Docker image
 EOF
+    print_status ".env file created in ${ROVODEV_DIR}"
 fi
-print_warning "Please edit .rovodev/.env file with your Atlassian credentials before running again."
-print_status "You can edit it with: nano ${ENV_FILE}"
-exit 1
 
-# Source environment variables
+# Source the env file to check if credentials are set
 source "${ENV_FILE}"
+
+# Check if credentials are set
+if [ -z "$ATLASSIAN_USERNAME" ] || [ -z "$ATLASSIAN_API_TOKEN" ]; then
+    print_warning "Please edit .rovodev/.env file with your Atlassian credentials before running again."
+    print_status "You can edit it with: nano ${ENV_FILE}"
+    exit 1
+fi
 
 # Print debug info about persistence settings from .env
 if [ -n "$PERSISTENCE_MODE" ]; then
@@ -273,13 +278,6 @@ if [ -n "$PERSISTENCE_MODE" ]; then
 fi
 if [ -n "$INSTANCE_ID" ]; then
     print_status "Loaded from .rovodev/.env: INSTANCE_ID=$INSTANCE_ID"
-fi
-
-# Validate required environment variables
-if [ -z "$ATLASSIAN_USERNAME" ] || [ -z "$ATLASSIAN_API_TOKEN" ]; then
-    print_error "Missing required environment variables in .rovodev/.env file!"
-    print_status "Please set ATLASSIAN_USERNAME and ATLASSIAN_API_TOKEN"
-    exit 1
 fi
 
 # Set default container name if not provided
