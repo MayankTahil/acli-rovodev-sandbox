@@ -5,11 +5,31 @@ setup_acli_auth() {
     if [ -n "$ATLASSIAN_API_TOKEN" ] && [ -n "$ATLASSIAN_USERNAME" ]; then
         echo "Setting up acli authentication..."
         mkdir -p /home/rovodev/.config/acli
-        echo "$ATLASSIAN_API_TOKEN" | acli rovodev auth login --email "$ATLASSIAN_USERNAME" --token
-        if [ $? -eq 0 ]; then
+        # Use printf to ensure the token is properly passed without interpretation
+        echo "Authenticating with email: $ATLASSIAN_USERNAME"
+        echo "Token length: ${#ATLASSIAN_API_TOKEN} characters"
+        
+        # Check if token has quotes that might cause issues
+        if [[ "$ATLASSIAN_API_TOKEN" == \"* ]] || [[ "$ATLASSIAN_API_TOKEN" == \'* ]]; then
+            echo "⚠️ Warning: Your API token appears to have quote characters. Removing them..."
+            # Remove surrounding quotes if present
+            ATLASSIAN_API_TOKEN=$(echo "$ATLASSIAN_API_TOKEN" | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")
+            echo "Token length after removing quotes: ${#ATLASSIAN_API_TOKEN} characters"
+        fi
+        
+        printf "%s" "$ATLASSIAN_API_TOKEN" | acli rovodev auth login --email "$ATLASSIAN_USERNAME" --token
+        AUTH_RESULT=$?
+        if [ $AUTH_RESULT -eq 0 ]; then
             echo "✅ acli authentication successful!"
+            # Verify the authentication by checking the config file
+            if [ -f "/home/rovodev/.config/acli/credentials.json" ]; then
+                echo "✅ Credentials file exists"
+            else
+                echo "⚠️ Credentials file not found after successful authentication"
+            fi
         else
-            echo "❌ acli authentication failed. Please check your credentials."
+            echo "❌ acli authentication failed (exit code: $AUTH_RESULT). Please check your credentials."
+            echo "Try authenticating manually using: acli rovodev auth login"
         fi
     else
         echo "⚠️  Authentication environment variables not set."

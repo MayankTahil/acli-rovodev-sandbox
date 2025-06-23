@@ -272,6 +272,33 @@ if [ -z "$ATLASSIAN_USERNAME" ] || [ -z "$ATLASSIAN_API_TOKEN" ]; then
     exit 1
 fi
 
+# Check if credentials have quotes that might cause issues
+if [[ "$ATLASSIAN_USERNAME" == \"* ]] || [[ "$ATLASSIAN_USERNAME" == *\" ]] || [[ "$ATLASSIAN_USERNAME" == \'* ]] || [[ "$ATLASSIAN_USERNAME" == *\' ]]; then
+    print_warning "Your ATLASSIAN_USERNAME contains quotes. This might cause authentication issues."
+    print_status "Removing quotes from ATLASSIAN_USERNAME..."
+    ATLASSIAN_USERNAME=$(echo "$ATLASSIAN_USERNAME" | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")
+    
+    # Create a temporary file and update the .env file in a portable way
+    TEMP_ENV=$(mktemp)
+    cat "${ENV_FILE}" | sed "s/^ATLASSIAN_USERNAME=.*/ATLASSIAN_USERNAME=$ATLASSIAN_USERNAME/" > "$TEMP_ENV"
+    cat "$TEMP_ENV" > "${ENV_FILE}"
+    rm -f "$TEMP_ENV"
+    print_status "Updated ATLASSIAN_USERNAME in ${ENV_FILE}"
+fi
+
+if [[ "$ATLASSIAN_API_TOKEN" == \"* ]] || [[ "$ATLASSIAN_API_TOKEN" == *\" ]] || [[ "$ATLASSIAN_API_TOKEN" == \'* ]] || [[ "$ATLASSIAN_API_TOKEN" == *\' ]]; then
+    print_warning "Your ATLASSIAN_API_TOKEN contains quotes. This might cause authentication issues."
+    print_status "Removing quotes from ATLASSIAN_API_TOKEN..."
+    ATLASSIAN_API_TOKEN=$(echo "$ATLASSIAN_API_TOKEN" | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")
+    
+    # Create a temporary file and update the .env file in a portable way
+    TEMP_ENV=$(mktemp)
+    cat "${ENV_FILE}" | sed "s/^ATLASSIAN_API_TOKEN=.*/ATLASSIAN_API_TOKEN=$ATLASSIAN_API_TOKEN/" > "$TEMP_ENV"
+    cat "$TEMP_ENV" > "${ENV_FILE}"
+    rm -f "$TEMP_ENV"
+    print_status "Updated ATLASSIAN_API_TOKEN in ${ENV_FILE}"
+fi
+
 # Print debug info about persistence settings from .env
 if [ -n "$PERSISTENCE_MODE" ]; then
     print_status "Loaded from .rovodev/.env: PERSISTENCE_MODE=$PERSISTENCE_MODE"
